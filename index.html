@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bomba Sorteos | Plataforma de Rifas y Sorteos</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <style id="app-style">
+        :root {
+            --color-primary: #FF4136;
+            --color-primary-dark: #E02A20;
+            --color-secondary: #FFCC00;
+            --color-dark: #333333;
+            --color-light: #F5F5F5;
+            --color-success: #2ECC40;
+            --color-danger: #FF4136;
+            --color-warning: #FFDC00;
+            --color-info: #39CCCC;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: var(--color-dark);
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+        }
+        
+        .btn-primary {
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--color-primary-dark);
+            border-color: var(--color-primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
+        }
+        
+        .raffle-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            max-width: 350px;
+            margin: 0 auto;
+        }
+        
+        .raffle-number {
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #ddd;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .raffle-number:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .raffle-number.selected {
+            background-color: var(--color-primary);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .raffle-number.sold {
+            background-color: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+        
+        .raffle-card {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .raffle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .raffle-header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            color: white;
+            padding: 15px;
+        }
+        
+        .cart-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .bomb-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .bomb-icon {
+            font-size: 100px;
+            color: var(--color-primary);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .winner-announcement {
+            font-size: 36px;
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f2d74e;
+            position: absolute;
+            left: 50%;
+            opacity: 0;
+            animation: confetti 5s ease-in-out infinite;
+            z-index: 9998;
+        }
+        
+        @keyframes confetti {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        .confetti:nth-child(odd) {
+            background-color: #f27c7c;
+        }
+        
+        .confetti:nth-child(even) {
+            background-color: #7cf2e7;
+        }
+        
+        .confetti:nth-child(3n) {
+            background-color: #f2b17c;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            color: white;
+        }
+        
+        .whatsapp-button {
+            background-color: #25D366;
+            color: white;
+            border-radius: 50px;
+            padding: 10px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(37, 211, 102, 0.3);
+        }
+        
+        .whatsapp-button:hover {
+            background-color: #128C7E;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(37, 211, 102, 0.4);
+        }
+        
+        .discount-badge {
+            background-color: var(--color-secondary);
+            color: var(--color-dark);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-block;
+            margin-left: 5px;
+        }
+        
+        .ribbon {
+            width: 150px;
+            height: 150px;
+            overflow: hidden;
+            position: absolute;
+        }
+        
+        .ribbon-top-right {
+            top: -10px;
+            right: -10px;
+        }
+        
+        .ribbon-top-right::before,
+        .ribbon-top-right::after {
+            border-top-color: transparent;
+            border-right-color: transparent;
+        }
+        
+        .ribbon-top-right::before {
+            top: 0;
+            left: 0;
+        }
+        
+        .ribbon-top-right::after {
+            bottom: 0;
+            right: 0;
+        }
+        
+        .ribbon-top-right span {
+            left: -25px;
+            top: 30px;
+            transform: rotate(45deg);
+        }
+        
+        .ribbon span {
+            position: absolute;
+            display: block;
+            width: 225px;
+            padding: 8px 0;
+            background-color: var(--color-secondary);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            color: var(--color-dark);
+            font-size: 14px;
+            font-weight: 700;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .raffle-grid {
+                max-width: 250px;
+            }
+            
+            .raffle-number {
+                font-size: 12px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .raffle-grid {
+                max-width: 200px;
+                gap: 1px;
+            }
+            
+            .raffle-number {
+                font-size: 10px;
+            }
+        }
+
+        /* Loading spinner */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--color-primary);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <nav class="bg-white shadow-sm py-3">
+            <div class="container mx-auto px-4 flex justify-between items-center">
+                <a class="navbar-brand flex items-center" href="javascript:void(0)">
+                    <img src="https://cdn.pixabay.com/photo/2014/04/03/10/25/bomb-310511_960_720.png" alt="Bomba Sorteos Logo" class="mr-2">
+                    <span class="text-xl font-bold text-gray-800">Bomba Sorteos</span>
+                </a>
+                <div class="hidden md:flex space-x-6">
+                    <a href="javascript:void(0)" class="text-gray-700 hover:text-red-500 transition" onclick="showView('public')">Inicio</a>
+                    <a href="javascript:void(0)" class="text-gray-700 hover:text-red-500 transition" onclick="showView('admin')">Admin</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="javascript:void(0)" id="cart-button" class="text-gray-700 hover:text-red-500 relative">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">0</span>
+                    </a>
+                    <button id="login-button" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition hidden md:block">
+                        Ingresar
+                    </button>
+                    <button class="md:hidden text-gray-700 focus:outline-none" id="menu-toggle">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="mobile-menu" class="hidden md:hidden bg-white px-4 pt-2 pb-4 shadow-inner">
+                <a href="javascript:void(0)" class="block py-2 text-gray-700 hover:text-red-500 transition" onclick="showView('public')">Inicio</a>
+                <a href="javascript:void(0)" class="block py-2 text-gray-700 hover:text-red-500 transition" onclick="showView('admin')">Admin</a>
+                <button class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition mt-2 w-full">
+                    Ingresar
+                </button>
+            </div>
+        </nav>
+
+        <div id="public-view">
+            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white py-12">
+                <div class="container mx-auto px-4 text-center">
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4 animate__animated animate__fadeIn">¡Sorteos Explosivos!</h1>
+                    <p class="text-lg md:text-xl mb-8 animate__animated animate__fadeIn animate__delay-1s">Participa en nuestras rifas y obtén la oportunidad de ganar increíbles premios</p>
+                    <div class="flex justify-center space-x-4 animate__animated animate__fadeIn animate__delay-2s">
+                        <button class="bg-white text-red-600 font-bold py-3 px-6 rounded-md hover:bg-gray-100 transition shadow-lg">
+                            Ver Sorteos Activos
+                        </button>
+                        <a href="#sorteos-destacados" class="bg-yellow-400 text-red-700 font-bold py-3 px-6 rounded-md hover:bg-yellow-500 transition shadow-lg">
+                            Sorteos Destacados
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <section class="py-12 bg-gray-100" id="sorteos-destacados">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold mb-8 text-center">Sorteos Activos</h2>
+                    
+                    <div id="raffles-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <p id="loading-message" class="col-span-full text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando sorteos...</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="py-12 bg-white">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold mb-8 text-center">Ganadores Recientes</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="flex bg-gradient-to-r from-red-50 to-red-100 rounded-lg overflow-hidden p-4 border border-red-200">
+                            <div class="flex-shrink-0">
+                                <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-bold text-lg">Carlos M.</h3>
+                                <p class="text-gray-600 text-sm mb-1">iPhone 15 Pro Max</p>
+                                <p class="text-gray-500 text-xs">Número ganador: <span class="font-bold text-red-600">42</span></p>
+                                <p class="text-gray-500 text-xs">Fecha: 10/04/2025</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex bg-gradient-to-r from-red-50 to-red-100 rounded-lg overflow-hidden p-4 border border-red-200">
+                            <div class="flex-shrink-0">
+                                <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-bold text-lg">Ana P.</h3>
+                                <p class="text-gray-600 text-sm mb-1">MacBook Pro M3</p>
+                                <p class="text-gray-500 text-xs">Número ganador: <span class="font-bold text-red-600">17</span></p>
+                                <p class="text-gray-500 text-xs">Fecha: 28/03/2025</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex bg-gradient-to-r from-red-50 to-red-100 rounded-lg overflow-hidden p-4 border border-red-200">
+                            <div class="flex-shrink-0">
+                                <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-bold text-lg">Roberto G.</h3>
+                                <p class="text-gray-600 text-sm mb-1">Samsung S24 Ultra</p>
+                                <p class="text-gray-500 text-xs">Número ganador: <span class="font-bold text-red-600">78</span></p>
+                                <p class="text-gray-500 text-xs">Fecha: 15/03/2025</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 text-center">
+                        <button class="bg-red-500 text-white font-medium py-2 px-6 rounded-md hover:bg-red-600 transition">
+                            Ver todos los ganadores
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-12 bg-gray-900 text-white">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold mb-8 text-center">Verificar Ticket</h2>
+                    
+                    <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 text-gray-800">
+                        <div class="mb-4">
+                            <label for="ticket-id" class="block text-sm font-medium text-gray-700 mb-2">Introduce el ID de tu ticket</label>
+                            <input type="text" id="ticket-id" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Ejemplo: BS-2025-12345">
+                        </div>
+                        <button id="verify-ticket" class="w-full bg-red-500 text-white font-medium py-3 rounded-md hover:bg-red-600 transition">
+                            Verificar Ticket
+                        </button>
+                        <div id="verification-result" class="mt-4 hidden">
+                            </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-12 bg-gray-100">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold mb-8 text-center">¿Cómo Funciona?</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="text-center">
+                            <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4">
+                                <i class="fas fa-dice"></i>
+                            </div>
+                            <h3 class="font-bold text-xl mb-2">1. Elige tus números</h3>
+                            <p class="text-gray-600">Selecciona tus números favoritos en la cuadrícula o usa Quick Pick para una selección aleatoria.</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <h3 class="font-bold text-xl mb-2">2. Realiza el pago</h3>
+                            <p class="text-gray-600">Paga de forma segura a través de nuestras múltiples opciones de pago, incluyendo WhatsApp.</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="bg-red-500 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <h3 class="font-bold text-xl mb-2">3. ¡Espera el sorteo!</h3>
+                            <p class="text-gray-600">Recibirás notificaciones por email y push cuando el sorteo comience. ¡Buena suerte!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gradient-to-r from-red-600 to-red-700 text-white">
+                <div class="container mx-auto px-4 text-center">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">¡No esperes más para ganar!</h2>
+                    <p class="text-lg mb-8 max-w-2xl mx-auto">Participa ahora en nuestros sorteos y obtén la oportunidad de llevarte increíbles premios. Cuantos más números compres, mayores descuentos obtendrás.</p>
+                    <button class="bg-white text-red-600 font-bold py-3 px-8 rounded-md text-lg hover:bg-gray-100 transition shadow-lg">
+                        Participar Ahora
+                    </button>
+                </div>
+            </section>
+
+            <footer class="bg-gray-900 text-white pt-12 pb-6">
+                <div class="container mx-auto px-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Bomba Sorteos</h3>
+                            <p class="text-gray-400 mb-4">La plataforma líder de rifas y sorteos en línea. Sorteos transparentes y premios garantizados.</p>
+                            <div class="flex space-x-4">
+                                <a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">
+                                    <i class="fab fa-instagram"></i>
+                                </a>
+                                <a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">
+                                    <i class="fab fa-twitter"></i>
+                                </a>
+                                <a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">
+                                    <i class="fab fa-youtube"></i>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Enlaces Rápidos</h3>
+                            <ul class="space-y-2">
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Inicio</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Sorteos Activos</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Ganadores</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Verificar Ticket</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">FAQ</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Legal</h3>
+                            <ul class="space-y-2">
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Términos y Condiciones</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Política de Privacidad</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Política de Reembolsos</a></li>
+                                <li><a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">Política de Cookies</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-bold mb-4">Contacto</h3>
+                            <ul class="space-y-2">
+                                <li class="flex items-center">
+                                    <i class="fas fa-envelope mr-2 text-red-500"></i>
+                                    <a href="mailto:info@bombasorteos.com" class="text-gray-400 hover:text-white transition">info@bombasorteos.com</a>
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-phone mr-2 text-red-500"></i>
+                                    <a href="tel:+123456789" class="text-gray-400 hover:text-white transition">+1 (234) 567-89</a>
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fab fa-whatsapp mr-2 text-red-500"></i>
+                                    <a href="javascript:void(0)" class="text-gray-400 hover:text-white transition">WhatsApp</a>
+                                </li>
+                                <li class="mt-4">
+                                    <a href="javascript:void(0)" class="whatsapp-button flex items-center justify-center">
+                                        <i class="fab fa-whatsapp"></i>
+                                        <span>Comprar por WhatsApp</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-800 pt-6 text-center text-gray-400 text-sm">
+                        <p>&copy; 2025 Bomba Sorteos. Todos los derechos reservados.</p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+        <div id="admin-view" class="hidden min-h-screen pt-12">
+            <div class="container mx-auto p-4">
+                <h1 class="text-3xl font-bold text-center my-6 text-gray-800">Panel de Administración</h1>
+
+                <div id="admin-login" class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-xl">
+                    <h2 class="text-2xl font-bold mb-6 text-center text-red-500">Acceso de Administrador</h2>
+                    <div class="mb-4">
+                        <label for="admin-email" class="block text-gray-700 font-bold mb-2">Email</label>
+                        <input type="email" id="admin-email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" placeholder="admin@bomba.com">
+                    </div>
+                    <div class="mb-6">
+                        <label for="admin-password" class="block text-gray-700 font-bold mb-2">Contraseña</label>
+                        <input type="password" id="admin-password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" placeholder="******">
+                    </div>
+                    <button id="admin-login-btn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full">
+                        Ingresar
+                    </button>
+                    <p id="auth-error" class="text-red-500 text-sm mt-4 hidden text-center">Error de autenticación.</p>
+                </div>
+
+                <div id="admin-content" class="hidden">
+                    <div class="flex justify-between items-center mb-6 max-w-5xl mx-auto">
+                        <button id="logout-btn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                        </button>
+                        <button id="open-create-modal" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                            <i class="fas fa-plus mr-2"></i>Crear Nuevo Sorteo
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-5xl mx-auto">
+                        <h2 class="text-2xl font-bold mb-4">Gestión de Sorteos</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Premio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendidos</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="raffles-admin-list" class="bg-white divide-y divide-gray-200">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="raffle-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="modal-header p-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white" id="raffle-modal-title">Selecciona tus números</h3>
+                <button id="close-raffle-modal" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-gray-700 font-medium">Precio por número: <span id="raffle-price" class="font-bold">$5</span></span>
+                        <div>
+                            <span class="text-gray-700 font-medium">Estado: </span>
+                            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Activo</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-100 p-2 rounded-lg mb-4">
+                        <p class="text-sm text-gray-600"><i class="fas fa-info-circle text-blue-500 mr-1"></i> Selecciona hasta 10 números para obtener un <span class="font-bold text-green-600">10% de descuento</span></p>
+                    </div>
+                    
+                    <div id="raffle-grid-container" class="raffle-grid">
+                        </div>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <div class="mb-4">
+                        <h4 class="font-bold text-lg mb-2">Números seleccionados</h4>
+                        <div id="selected-numbers" class="flex flex-wrap gap-2">
+                            <span class="text-gray-500 text-sm">Ningún número seleccionado</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-gray-700">Total: </span>
+                            <span id="total-price" class="font-bold text-lg">$0</span>
+                            <span id="discount-tag" class="hidden discount-badge">-10%</span>
+                        </div>
+                        <button id="add-to-cart" class="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                            Agregar al carrito
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="raffle-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-lg w-full">
+            <div class="modal-header p-4 bg-red-500 text-white flex justify-between items-center">
+                <h3 class="text-xl font-bold" id="edit-modal-title"></h3>
+                <button id="close-edit-modal" class="text-white hover:text-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="raffle-doc-id">
+                <div class="mb-4">
+                    <label for="edit-title" class="block text-gray-700 font-bold mb-2">Título / Premio</label>
+                    <input type="text" id="edit-title" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                </div>
+                <div class="mb-4">
+                    <label for="edit-price" class="block text-gray-700 font-bold mb-2">Precio por número ($)</label>
+                    <input type="number" id="edit-price" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                </div>
+                <div class="mb-4">
+                    <label for="edit-image" class="block text-gray-700 font-bold mb-2">URL de Imagen</label>
+                    <input type="text" id="edit-image" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                </div>
+                <div class="mb-4">
+                    <label for="edit-timeleft" class="block text-gray-700 font-bold mb-2">Tiempo Restante (Ej: 2d 14h 35m)</label>
+                    <input type="text" id="edit-timeleft" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700">
+                </div>
+                <div class="mb-6">
+                    <label for="edit-soldnumbers" class="block text-gray-700 font-bold mb-2">Números Vendidos (Separados por coma, Ej: 12,23,45) - **Actualización en tiempo real**</label>
+                    <textarea id="edit-soldnumbers" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"></textarea>
+                </div>
+                <button id="save-raffle-btn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded w-full">
+                    Guardar Sorteo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg transform translate-x-full transition-transform duration-300 ease-in-out z-40">
+        <div class="h-full flex flex-col">
+            <div class="p-4 bg-red-500 text-white flex justify-between items-center">
+                <h3 class="font-bold text-xl">Tu Carrito</h3>
+                <button id="close-cart" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4" id="cart-items">
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                    <p>Tu carrito está vacío</p>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t">
+                <div class="mb-4">
+                    <div class="flex justify-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="cart-subtotal">$0.00</span>
+                    </div>
+                    <div class="flex justify-between mb-2 text-green-600">
+                        <span>Descuento:</span>
+                        <span id="cart-discount">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-bold">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+                
+                <button id="checkout-btn" class="w-full bg-red-500 text-white py-3 rounded-md hover:bg-red-600 transition flex items-center justify-center space-x-2 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-lock"></i>
+                    <span>Proceder al pago</span>
+                </button>
+                
+                <div class="mt-4 flex justify-center">
+                    <a href="javascript:void(0)" class="whatsapp-button text-sm">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>Comprar por WhatsApp</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="verification-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <div class="text-center" id="verification-modal-content">
+                </div>
+            <div class="mt-6 text-center">
+                <button id="close-verification-modal" class="bg-red-500 text-white py-2 px-6 rounded-md hover:bg-red-600 transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-md w-full">
+            <div class="modal-header p-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Ingresar a tu cuenta</h3>
+                <button id="close-login-modal" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                    <input type="email" id="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="ejemplo@correo.com">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>
+                    <input type="password" id="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" placeholder="******************">
+                </div>
+                <div class="flex items-center justify-between">
+                    <button id="submit-login" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
+                        Ingresar
+                    </button>
+                </div>
+                <div class="text-center mt-4">
+                    <a href="javascript:void(0)" class="text-sm text-red-500 hover:text-red-800">¿Olvidaste tu contraseña?</a>
+                </div>
+                <div class="mt-6 border-t pt-4 text-center">
+                    <p class="text-sm">¿No tienes cuenta?</p>
+                    <a href="javascript:void(0)" class="text-red-500 font-medium hover:text-red-800">Registrarse</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-lg w-full">
+            <div class="modal-header p-4 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">Finalizar Compra</h3>
+                <button id="close-checkout-modal" class="text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <h4 class="font-bold text-lg mb-4">Resumen de la compra</h4>
+                    <div id="checkout-items" class="mb-4">
+                        </div>
+                    
+                    <div class="border-t pt-2 mt-2">
+                        <div class="flex justify-between mb-1">
+                            <span>Subtotal:</span>
+                            <span id="checkout-subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between mb-1 text-green-600">
+                            <span>Descuento:</span>
+                            <span id="checkout-discount">-$0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg">
+                            <span>Total:</span>
+                            <span id="checkout-total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="font-bold text-lg mb-4">Información personal</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="checkout-name" class="block text-gray-700 text-sm font-medium mb-2">Nombre completo</label>
+                            <input type="text" id="checkout-name" class="w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label for="checkout-email" class="block text-gray-700 text-sm font-medium mb-2">Email</label>
+                            <input type="email" id="checkout-email" class="w-full px-3 py-2 border rounded-md">
+                        </div>
+                        <div>
+                            <label for="checkout-phone" class="block text-gray-700 text-sm font-medium mb-2">Teléfono / WhatsApp</label>
+                            <input type="tel" id="checkout-phone" class="w-full px-3 py-2 border rounded-md">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="font-bold text-lg mb-4">Método de pago</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="border rounded-md p-3 cursor-pointer hover:bg-gray-50 transition flex items-center payment-option active" data-payment="paypal">
+                            <input type="radio" name="payment" id="payment-paypal" class="mr-2" checked>
+                            <label for="payment-paypal" class="flex items-center cursor-pointer">
+                                <img src="https://cdn.pixabay.com/photo/2015/05/26/09/37/paypal-784404_1280.png" alt="PayPal" class="h-8">
+                            </label>
+                        </div>
+                        <div class="border rounded-md p-3 cursor-pointer hover:bg-gray-50 transition flex items-center payment-option" data-payment="card">
+                            <input type="radio" name="payment" id="payment-card" class="mr-2">
+                            <label for="payment-card" class="flex items-center cursor-pointer">
+                                <i class="fas fa-credit-card text-blue-500 text-2xl mr-2"></i>
+                                <span>Tarjeta de crédito</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between">
+                    <button id="back-to-cart" class="bg-gray-300 text-gray-700 py-2 px-6 rounded-md hover:bg-gray-400 transition">
+                        Volver
+                    </button>
+                    <button id="complete-purchase" class="bg-red-500 text-white py-2 px-6 rounded-md hover:bg-red-600 transition">
+                        Completar compra
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg max-w-md w-full p-6 text-center">
+            <div class="text-green-500 text-6xl mb-4">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">¡Compra exitosa!</h3>
+            <p class="text-gray-600 mb-6">Tu compra ha sido procesada correctamente. Te hemos enviado un correo con los detalles.</p>
+            <p class="bg-gray-100 p-3 rounded-md mb-6">
+                ID de compra: <span class="font-mono font-bold">BS-2025-12345</span>
+            </p>
+            <div class="flex justify-center space-x-4">
+                <button id="close-success-modal" class="bg-red-500 text-white py-2 px-6 rounded-md hover:bg-red-600 transition">
+                    Aceptar
+                </button>
+                <a href="javascript:void(0)" class="whatsapp-button">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Compartir</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bomb-animation" id="bomb-animation">
+        <div class="bomb-icon">
+            <i class="fas fa-bomb"></i>
+        </div>
+        <div class="winner-announcement">
+            ¡SORTEANDO!
+        </div>
+    </div>
+
+
+    <script id="app-script-firebase">
+        // =================================================================
+        // 1. CONFIGURACIÓN INICIAL DE FIREBASE
+        // =================================================================
+
+        // ** ⚠️ IMPORTANTE: REEMPLAZA ESTOS VALORES CON TU PROPIA CONFIGURACIÓN ⚠️ **
+        const firebaseConfig = {
+            apiKey: "TU_API_KEY_AQUI", 
+            authDomain: "TU_PROJECT_ID.firebaseapp.com",
+            projectId: "TU_PROJECT_ID",
+            storageBucket: "TU_PROJECT_ID.appspot.com",
+            messagingSenderId: "TU_SENDER_ID",
+            appId: "TU_APP_ID"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const rafflesRef = db.collection('raffles');
+
+        // =================================================================
+        // 2. LÓGICA DE VISTAS Y ESTADO GLOBAL
+        // =================================================================
+
+        let currentRaffleDocId = null;
+        let selectedNumbers = [];
+        
+        let cart = {
+            items: [],
+            subtotal: 0,
+            discount: 0,
+            total: 0
+        };
+
+        function showView(viewName) {
+            $('#public-view').addClass('hidden');
+            $('#admin-view').addClass('hidden');
+            
+            if (viewName === 'public') {
+                $('#public-view').removeClass('hidden');
+            } else if (viewName === 'admin') {
+                $('#admin-view').removeClass('hidden');
+                handleAdminView();
+            }
+        }
+
+        // =================================================================
+        // 3. FUNCIONES DEL MODO PÚBLICO (Lectura en tiempo real)
+        // =================================================================
+
+        function createRaffleCard(raffle, docId) {
+            const totalNumbers = 100;
+            const soldCount = raffle.soldNumbers ? raffle.soldNumbers.length : 0;
+            const soldPercentage = ((soldCount / totalNumbers) * 100).toFixed(0);
+
+            return `
+                <div class="raffle-card bg-white overflow-hidden" data-doc-id="${docId}">
+                    <div class="raffle-header">
+                        <h3 class="text-xl font-bold mb-1">${raffle.title}</h3>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm"><i class="far fa-clock mr-1"></i> Finaliza en: ${raffle.timeLeft}</span>
+                            <span class="bg-yellow-400 text-red-700 text-xs font-bold px-3 py-1 rounded-full">ACTIVO</span>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <img src="${raffle.imageUrl || 'https://cdn.pixabay.com/photo/2020/05/17/04/47/explosion-5179427_1280.png'}" alt="${raffle.title}" class="w-full h-48 object-cover">
+                        <div class="ribbon ribbon-top-right"><span>¡${soldPercentage}% Vendido!</span></div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-sm text-gray-600"><i class="fas fa-users mr-1"></i> ${soldCount} números vendidos</div>
+                            <div class="text-sm font-medium text-gray-800">Precio: $${raffle.price} / número</div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <button class="btn-primary bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-md transition view-raffle-fb" 
+                                    data-doc-id="${docId}">
+                                Ver Cuadrícula
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function listenForRaffles() {
+            const container = $('#raffles-list');
+            
+            rafflesRef.onSnapshot(snapshot => {
+                container.empty();
+                $('#loading-message').remove();
+
+                if (snapshot.empty) {
+                    container.append('<p class="col-span-full text-center text-gray-500">No hay sorteos activos en este momento.</p>');
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const raffle = doc.data();
+                    const docId = doc.id;
+                    container.append(createRaffleCard(raffle, docId));
+                });
+
+                $('.view-raffle-fb').off('click').on('click', function() {
+                    currentRaffleDocId = $(this).data('doc-id');
+                    rafflesRef.doc(currentRaffleDocId).get().then(doc => {
+                        if (doc.exists) {
+                            const raffleData = doc.data();
+                            openRaffleModal(raffleData, currentRaffleDocId);
+                        }
+                    });
+                });
+            }, error => {
+                console.error("Error al escuchar los sorteos:", error);
+                container.html('<p class="col-span-full text-center text-red-500">Error al cargar los sorteos. Intenta de nuevo más tarde.</p>');
+            });
+        }
+        
+        function openRaffleModal(raffle, docId) {
+            const gridContainer = $('#raffle-grid-container');
+            gridContainer.empty();
+            selectedNumbers = [];
+            
+            const soldNumbers = raffle.soldNumbers || [];
+            
+            for (let i = 0; i < 100; i++) {
+                const formattedNumber = i.toString().padStart(2, '0');
+                const isSold = soldNumbers.includes(i);
+                
+                const numberDiv = $('<div>')
+                    .addClass('raffle-number')
+                    .addClass(isSold ? 'sold' : '')
+                    .attr('data-number', i)
+                    .text(formattedNumber);
+                
+                if (!isSold) {
+                    numberDiv.click(function() {
+                        toggleNumber($(this), i);
+                    });
+                }
+                gridContainer.append(numberDiv);
+            }
+            
+            $('#raffle-modal-title').text(`Selecciona tus números - ${raffle.title}`);
+            $('#raffle-price').text(`$${raffle.price}`);
+            updateSelectedNumbersUI();
+            updateTotalPrice(raffle.price);
+            $('#raffle-modal').removeClass('hidden');
+        }
+
+        function toggleNumber(element, number) {
+            const isSelected = element.hasClass('selected');
+            
+            if (isSelected) {
+                element.removeClass('selected');
+                selectedNumbers = selectedNumbers.filter(n => n !== number);
+            } else {
+                if (selectedNumbers.length < 20) { // Límite de números seleccionables
+                    element.addClass('selected');
+                    selectedNumbers.push(number);
+                } else {
+                    alert('Máximo 20 números por sorteo');
+                    return;
+                }
+            }
+            
+            updateSelectedNumbersUI();
+            const price = parseFloat($('#raffle-price').text().replace('$', ''));
+            updateTotalPrice(price);
+        }
+
+        function updateSelectedNumbersUI() {
+            const container = $('#selected-numbers');
+            container.empty();
+            
+            if (selectedNumbers.length === 0) {
+                container.append('<span class="text-gray-500 text-sm">Ningún número seleccionado</span>');
+                $('#add-to-cart').prop('disabled', true);
+            } else {
+                selectedNumbers.forEach(number => {
+                    const formattedNumber = number.toString().padStart(2, '0');
+                    const badge = $('<span>')
+                        .addClass('bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center')
+                        .html(`${formattedNumber} <button class="ml-1 text-red-500 hover:text-red-700" data-remove="${number}"><i class="fas fa-times"></i></button>`);
+                    
+                    badge.find('button').click(function() {
+                        const numToRemove = parseInt($(this).attr('data-remove'));
+                        $(`.raffle-number[data-number="${numToRemove}"]`).removeClass('selected');
+                        selectedNumbers = selectedNumbers.filter(n => n !== numToRemove);
+                        updateSelectedNumbersUI();
+                        
+                        const price = parseFloat($('#raffle-price').text().replace('$', ''));
+                        updateTotalPrice(price);
+                    });
+                    
+                    container.append(badge);
+                });
+                $('#add-to-cart').prop('disabled', false);
+            }
+        }
+
+        function updateTotalPrice(price) {
+            const count = selectedNumbers.length;
+            let total = count * price;
+            let discount = 0;
+            
+            if (count >= 10) {
+                discount = total * 0.1;
+                $('#discount-tag').removeClass('hidden');
+            } else {
+                $('#discount-tag').addClass('hidden');
+            }
+            
+            total -= discount;
+            
+            $('#total-price').text(`$${total.toFixed(2)}`);
+        }
+        
+        function addToCart() {
+            if (!currentRaffleDocId || selectedNumbers.length === 0) return;
+            
+            const price = parseFloat($('#raffle-price').text().replace('$', ''));
+            const raffleTitle = $('#raffle-modal-title').text().replace('Selecciona tus números - ', '');
+            
+            const count = selectedNumbers.length;
+            let subtotal = count * price;
+            let discount = 0;
+            
+            if (count >= 10) {
+                discount = subtotal * 0.1;
+            }
+            
+            const total = subtotal - discount;
+            
+            const cartItem = {
+                raffleId: currentRaffleDocId,
+                raffleTitle: raffleTitle,
+                numbers: [...selectedNumbers],
+                price: price,
+                subtotal: subtotal,
+                discount: discount,
+                total: total
+            };
+            
+            cart.items.push(cartItem);
+            updateCartTotals();
+            updateCartUI();
+            
+            $('#raffle-modal').addClass('hidden');
+            selectedNumbers = [];
+            currentRaffleDocId = null;
+            
+            $('#cart-sidebar').removeClass('translate-x-full');
+        }
+
+        function updateCartTotals() {
+            cart.subtotal = cart.items.reduce((sum, item) => sum + item.subtotal, 0);
+            cart.discount = cart.items.reduce((sum, item) => sum + item.discount, 0);
+            cart.total = cart.subtotal - cart.discount;
+            
+            $('#cart-subtotal').text(`$${cart.subtotal.toFixed(2)}`);
+            $('#cart-discount').text(`-$${cart.discount.toFixed(2)}`);
+            $('#cart-total').text(`$${cart.total.toFixed(2)}`);
+            
+            $('#cart-count').text(cart.items.reduce((sum, item) => sum + item.numbers.length, 0));
+            
+            $('#checkout-btn').prop('disabled', cart.items.length === 0);
+        }
+
+        function updateCartUI() {
+            const container = $('#cart-items');
+            container.empty();
+            
+            if (cart.items.length === 0) {
+                container.append(`
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                        <p>Tu carrito está vacío</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            cart.items.forEach((item, index) => {
+                const numbersText = item.numbers.map(n => n.toString().padStart(2, '0')).join(', ');
+                const itemHtml = `
+                    <div class="cart-item">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-sm">${item.raffleTitle}</h4>
+                            <button class="text-red-500 remove-item" data-index="${index}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-1">Números: ${numbersText}</p>
+                        <div class="flex justify-between text-sm">
+                            <span>${item.numbers.length} x $${item.price}</span>
+                            <span class="font-bold">$${item.total.toFixed(2)}</span>
+                        </div>
+                        ${item.discount > 0 ? 
+                            `<p class="text-xs text-green-600">Descuento aplicado: -$${item.discount.toFixed(2)}</p>` : 
+                            ''}
+                    </div>
+                `;
+                container.append(itemHtml);
+            });
+            
+            $('.remove-item').click(function() {
+                const index = parseInt($(this).data('index'));
+                cart.items.splice(index, 1);
+                updateCartTotals();
+                updateCartUI();
+            });
+        }
+
+        function verifyTicket() {
+            const ticketId = $('#ticket-id').val().trim();
+            const resultDiv = $('#verification-result');
+            
+            if (!ticketId) {
+                resultDiv.html('<p class="text-red-500">Por favor ingresa un ID de ticket</p>').removeClass('hidden');
+                return;
+            }
+            
+            resultDiv.html(`
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Verificando ticket...</p>
+                </div>
+            `).removeClass('hidden');
+            
+            setTimeout(() => {
+                const isValid = Math.random() > 0.5;
+                if (isValid) {
+                    resultDiv.html(`
+                        <div class="text-center text-green-500">
+                            <i class="fas fa-check-circle text-3xl mb-2"></i>
+                            <p class="font-bold">Ticket válido</p>
+                            <p class="text-sm">ID: ${ticketId}</p>
+                            <p class="text-sm">Estado: Activo</p>
+                        </div>
+                    `);
+                } else {
+                    resultDiv.html(`
+                        <div class="text-center text-red-500">
+                            <i class="fas fa-times-circle text-3xl mb-2"></i>
+                            <p class="font-bold">Ticket no válido</p>
+                            <p class="text-sm">ID: ${ticketId}</p>
+                            <p class="text-sm">No encontrado en nuestros registros</p>
+                        </div>
+                    `);
+                }
+            }, 1500);
+        }
+
+        function updateCheckoutUI() {
+            const container = $('#checkout-items');
+            container.empty();
+            
+            cart.items.forEach(item => {
+                const numbersText = item.numbers.map(n => n.toString().padStart(2, '0')).join(', ');
+                const itemHtml = `
+                    <div class="border-b pb-2 mb-2">
+                        <h5 class="font-bold">${item.raffleTitle}</h5>
+                        <p class="text-sm text-gray-600">Números: ${numbersText}</p>
+                        <p class="text-sm text-right">$${item.total.toFixed(2)}</p>
+                    </div>
+                `;
+                container.append(itemHtml);
+            });
+            
+            $('#checkout-subtotal').text(`$${cart.subtotal.toFixed(2)}`);
+            $('#checkout-discount').text(`-$${cart.discount.toFixed(2)}`);
+            $('#checkout-total').text(`$${cart.total.toFixed(2)}`);
+        }
+
+        function processCheckout() {
+            const name = $('#checkout-name').val().trim();
+            const email = $('#checkout-email').val().trim();
+            const phone = $('#checkout-phone').val().trim();
+            
+            if (!name || !email || !phone) {
+                alert('Por favor completa todos los campos de información personal');
+                return;
+            }
+            
+            $('#complete-purchase').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...');
+            
+            setTimeout(() => {
+                $('#checkout-modal').addClass('hidden');
+                $('#success-modal').removeClass('hidden');
+                $('#complete-purchase').prop('disabled', false).html('Completar compra');
+                
+                // Limpiar carrito después de la compra
+                cart.items = [];
+                updateCartTotals();
+                updateCartUI();
+            }, 2000);
+        }
+
+        // =================================================================
+        // 4. FUNCIONES DEL MODO ADMINISTRADOR (Auth, CRUD)
+        // =================================================================
+
+        function handleAdminView() {
+            auth.onAuthStateChanged(user => {
+                const loginForm = $('#admin-login');
+                const adminContent = $('#admin-content');
+
+                if (user) {
+                    loginForm.addClass('hidden');
+                    adminContent.removeClass('hidden');
+                    listenForAdminRaffles(); 
+                } else {
+                    loginForm.removeClass('hidden');
+                    adminContent.addClass('hidden');
+                }
+            });
+        }
+
+        function adminLogin() {
+            const email = $('#admin-email').val();
+            const password = $('#admin-password').val();
+            const loginBtn = $('#admin-login-btn');
+            const errorText = $('#auth-error');
+
+            loginBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Ingresando...');
+            errorText.addClass('hidden');
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    loginBtn.prop('disabled', false).html('Ingresar');
+                })
+                .catch(error => {
+                    errorText.text(`Error: ${error.message}`).removeClass('hidden');
+                    loginBtn.prop('disabled', false).html('Ingresar');
+                });
+        }
+
+        function adminLogout() {
+            auth.signOut().then(() => {
+                console.log("Sesión cerrada");
+            });
+        }
+
+        function listenForAdminRaffles() {
+            const container = $('#raffles-admin-list');
+            container.empty().html('<tr><td colspan="4" class="text-center py-4 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando gestión...</td></tr>');
+
+            rafflesRef.onSnapshot(snapshot => {
+                container.empty();
+                snapshot.forEach(doc => {
+                    const raffle = doc.data();
+                    const docId = doc.id;
+                    const soldCount = raffle.soldNumbers ? raffle.soldNumbers.length : 0;
+                    
+                    const raffleJson = JSON.stringify({
+                        ...raffle,
+                        soldNumbers: raffle.soldNumbers ? raffle.soldNumbers.join(',') : ''
+                    });
+
+                    const row = `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${raffle.title}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">$${raffle.price}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${soldCount}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button class="text-indigo-600 hover:text-indigo-900 edit-raffle-btn" data-doc-id="${docId}" data-raffle='${raffleJson}'>
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                                <button class="text-red-600 hover:text-red-900 ml-4 delete-raffle-btn" data-doc-id="${docId}">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    container.append(row);
+                });
+
+                $('.edit-raffle-btn').off('click').on('click', function() {
+                    const docId = $(this).data('doc-id');
+                    const raffleData = JSON.parse($(this).attr('data-raffle')); 
+                    openEditModal(docId, raffleData);
+                });
+
+                $('.delete-raffle-btn').off('click').on('click', function() {
+                    const docId = $(this).data('doc-id');
+                    if (confirm('¿Estás seguro de que quieres eliminar este sorteo? Esta acción se verá reflejada de inmediato en la web pública.')) {
+                        deleteRaffle(docId);
+                    }
+                });
+            });
+        }
+
+        function openEditModal(docId, raffle) {
+            $('#raffle-doc-id').val(docId || '');
+            $('#edit-title').val('');
+            $('#edit-price').val('');
+            $('#edit-image').val('');
+            $('#edit-timeleft').val('2d 0h 0m');
+            $('#edit-soldnumbers').val('');
+            
+            if (raffle) {
+                $('#edit-modal-title').text('Editar Sorteo');
+                $('#edit-title').val(raffle.title);
+                $('#edit-price').val(raffle.price);
+                $('#edit-image').val(raffle.imageUrl || '');
+                $('#edit-timeleft').val(raffle.timeLeft);
+                $('#edit-soldnumbers').val(raffle.soldNumbers || '');
+            } else {
+                $('#edit-modal-title').text('Crear Sorteo');
+            }
+            
+            $('#raffle-edit-modal').removeClass('hidden');
+        }
+
+        function saveRaffle() {
+            const docId = $('#raffle-doc-id').val();
+            const title = $('#edit-title').val().trim();
+            const price = parseFloat($('#edit-price').val());
+            const imageUrl = $('#edit-image').val().trim();
+            const timeLeft = $('#edit-timeleft').val().trim();
+            const soldNumbersStr = $('#edit-soldnumbers').val();
+            
+            if (!title || isNaN(price) || price <= 0 || !timeLeft) {
+                alert('Por favor completa el Título, Precio y Tiempo Restante.');
+                return;
+            }
+
+            const soldNumbers = soldNumbersStr.split(',')
+                                            .map(n => parseInt(n.trim()))
+                                            .filter(n => !isNaN(n) && n >= 0 && n <= 99);
+
+            const raffleData = {
+                title: title,
+                price: price,
+                imageUrl: imageUrl,
+                timeLeft: timeLeft,
+                soldNumbers: soldNumbers 
+            };
+            
+            const saveBtn = $('#save-raffle-btn');
+            saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...');
+
+            if (docId) {
+                rafflesRef.doc(docId).update(raffleData)
+                    .then(() => {
+                        alert('Sorteo actualizado con éxito! Los cambios se sincronizaron.');
+                        $('#raffle-edit-modal').addClass('hidden');
+                    })
+                    .catch(error => {
+                        alert('Error al actualizar: ' + error.message);
+                    })
+                    .finally(() => {
+                         saveBtn.prop('disabled', false).html('Guardar Sorteo');
+                    });
+            } else {
+                rafflesRef.add(raffleData)
+                    .then(() => {
+                        alert('Sorteo creado con éxito! Los cambios se sincronizaron.');
+                        $('#raffle-edit-modal').addClass('hidden');
+                    })
+                    .catch(error => {
+                        alert('Error al crear: ' + error.message);
+                    })
+                    .finally(() => {
+                         saveBtn.prop('disabled', false).html('Guardar Sorteo');
+                    });
+            }
+        }
+
+        function deleteRaffle(docId) {
+            rafflesRef.doc(docId).delete()
+                .then(() => {
+                    alert('Sorteo eliminado con éxito. Sincronización en tiempo real completada.');
+                })
+                .catch(error => {
+                    alert('Error al eliminar: ' + error.message);
+                });
+        }
+
+        // =================================================================
+        // 5. INICIALIZACIÓN DE EVENTOS Y RUTAS
+        // =================================================================
+
+        $(document).ready(function() {
+            listenForRaffles();
+            showView('public');
+            
+            $('#menu-toggle').click(function() {
+                $('#mobile-menu').slideToggle();
+            });
+
+            $('#login-button').click(function() {
+                $('#login-modal').removeClass('hidden');
+            });
+            $('#close-login-modal').click(function() {
+                $('#login-modal').addClass('hidden');
+            });
+
+            $('#cart-button').click(function() {
+                $('#cart-sidebar').removeClass('translate-x-full');
+            });
+            $('#close-cart').click(function() {
+                $('#cart-sidebar').addClass('translate-x-full');
+            });
+
+            // --- Eventos del Modo Admin ---
+            $('#admin-login-btn').click(adminLogin);
+            $('#logout-btn').click(adminLogout);
+            $('#open-create-modal').click(() => openEditModal(null, null));
+            $('#close-edit-modal').click(() => $('#raffle-edit-modal').addClass('hidden'));
+            $('#save-raffle-btn').click(saveRaffle);
+            
+            // --- Eventos del Modal de Cuadrícula ---
+            $('#close-raffle-modal').click(function() {
+                $('#raffle-modal').addClass('hidden');
+                currentRaffleDocId = null;
+                selectedNumbers = [];
+            });
+            
+            $('#add-to-cart').click(addToCart);
+
+            // Checkout
+            $('#checkout-btn').click(function() {
+                if (cart.items.length === 0) return;
+                $('#checkout-modal').removeClass('hidden');
+                updateCheckoutUI();
+            });
+
+            $('#close-checkout-modal').click(function() {
+                $('#checkout-modal').addClass('hidden');
+            });
+
+            $('#back-to-cart').click(function() {
+                $('#checkout-modal').addClass('hidden');
+            });
+
+            $('#complete-purchase').click(processCheckout);
+
+            $('#close-success-modal').click(function() {
+                $('#success-modal').addClass('hidden');
+            });
+
+            $('#close-verification-modal').click(function() {
+                $('#verification-modal').addClass('hidden');
+            });
+
+            // Verificar ticket
+            $('#verify-ticket').click(verifyTicket);
+
+            // Métodos de pago
+            $('.payment-option').click(function() {
+                $('.payment-option').removeClass('active border-red-500').addClass('border-gray-300');
+                $(this).addClass('active border-red-500').removeClass('border-gray-300');
+                $(this).find('input[type="radio"]').prop('checked', true);
+            });
+        });
+    </script>
+</body>
+</html>
